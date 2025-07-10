@@ -57,9 +57,18 @@ def upload_files():
         api_key = request.form.get('api_key', '')
         model = request.form.get('model', 'gpt-4o')
         
-        # Validate API key
+        # Validate API key format first to avoid wasting credits
         if not api_key:
             return jsonify({'success': False, 'error': 'Chave API é obrigatória'}), 400
+        
+        # Basic format validation to prevent obvious errors
+        from utils import validate_api_key
+        if not validate_api_key(provider, api_key):
+            return jsonify({
+                'success': False, 
+                'error': f'Formato de chave API inválido para {provider}. Verifique se a chave está correta.',
+                'show_modal': True
+            }), 400
         
         # Get uploaded files
         files = request.files.getlist('files')

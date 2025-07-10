@@ -95,12 +95,22 @@ class OpenAIClient(BaseAIClient):
                 max_tokens=4000
             )
             
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            logger.debug(f"OpenAI raw response: {content[:200]}...")
+            
+            # Verificar se a resposta é válida
+            if not content or content.strip().startswith('<'):
+                logger.error("OpenAI returned HTML or empty response")
+                return '{"produtos": []}'
+                
+            return content
         except Exception as e:
             logger.error(f"OpenAI API error: {str(e)}")
-            if "insufficient_quota" in str(e).lower() or "quota" in str(e).lower():
+            if "insufficient_quota" in str(e).lower() or "quota" in str(e).lower() or "billing" in str(e).lower():
                 raise Exception("Entrar em contato com o Fornecedor para ativar o uso da plataforma")
-            raise e
+            # Para outros erros, retornar estrutura vazia em vez de falhar
+            logger.warning(f"OpenAI error, returning empty structure: {str(e)}")
+            return '{"produtos": []}'
     
     def _get_extraction_prompt(self, text: str) -> str:
         """Generate extraction prompt"""

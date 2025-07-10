@@ -175,45 +175,83 @@ class DocumentProcessor:
     def _clean_json_response(self, response: str) -> str:
         """Clean AI response to extract valid JSON"""
         try:
-            # Log the raw response for debugging
-            logger.debug(f"Raw AI response: {response[:500]}...")
-            
-            # Check if response contains HTML error
-            if response.strip().startswith('<'):
-                logger.error("AI response contains HTML instead of JSON")
+            if not response or not response.strip():
+                print("Empty response from AI")
                 return '{"produtos": []}'
             
-            # Remove markdown code blocks
-            response = re.sub(r'```json\s*', '', response)
-            response = re.sub(r'```\s*', '', response)
-            
-            # Remove any leading/trailing text that might not be JSON
             response = response.strip()
             
-            # Try to find JSON object with better pattern matching
-            json_patterns = [
-                r'\{[^{}]*"produtos"[^{}]*\[[^\[\]]*\][^{}]*\}',  # Simple case
-                r'\{.*?"produtos".*?\[.*?\].*?\}',  # More flexible
-                r'\{.*\}',  # Most flexible
+            # Check for common error patterns that waste credits
+            error_patterns = [
+                '<html',
+                '<!DOCTYPE',
+                'error',
+                'unable to',
+                'cannot process',
+                'quota exceeded',
+                'unauthorized',
+                'invalid api key',
+                'billing',
+                'credits'
             ]
             
-            for pattern in json_patterns:
-                json_match = re.search(pattern, response, re.DOTALL)
-                if json_match:
-                    candidate = json_match.group(0)
-                    try:
-                        # Test if it's valid JSON
-                        json.loads(candidate)
-                        return candidate
-                    except json.JSONDecodeError:
-                        continue
+            response_lower = response.lower()
+            for pattern in error_patterns:
+                if pattern in response_lower:
+                    print(f"AI response contains error pattern '{pattern}': {response[:100]}...")
+                    return '{"produtos": []}'
             
-            # If no valid JSON found, return empty structure
-            logger.warning("No valid JSON found in AI response, returning empty structure")
-            return '{"produtos": []}'
+            # Remove markdown formatting
+            if '```json' in response:
+                start = response.find('```json') + 7
+                end = response.find('```', start)
+                if end != -1:
+                    response = response[start:end].strip()
+            elif '```' in response:
+                start = response.find('```') + 3
+                end = response.find('```', start)
+                if end != -1:
+                    response = response[start:end].strip()
+            
+            # Simple JSON extraction - look for { ... }
+            start_brace = response.find('{')
+            if start_brace == -1:
+                print("No JSON object found in response")
+                return '{"produtos": []}'
+            
+            # Count braces to find the end
+            brace_count = 0
+            end_pos = start_brace
+            
+            for i in range(start_brace, len(response)):
+                if response[i] == '{':
+                    brace_count += 1
+                elif response[i] == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_pos = i
+                        break
+            
+            if brace_count != 0:
+                print("Unmatched braces in JSON")
+                return '{"produtos": []}'
+            
+            potential_json = response[start_brace:end_pos + 1]
+            
+            # Quick validation
+            try:
+                test_parse = json.loads(potential_json)
+                if isinstance(test_parse, dict):
+                    return potential_json
+                else:
+                    print("Parsed JSON is not a dict object")
+                    return '{"produtos": []}'
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error: {str(e)}")
+                return '{"produtos": []}'
             
         except Exception as e:
-            logger.error(f"Error cleaning JSON response: {str(e)}")
+            print(f"Error cleaning JSON response: {str(e)}")
             return '{"produtos": []}'
     
     def _normalize_product_data(self, product_data: Dict, source_file: str) -> Dict[str, Any]:
