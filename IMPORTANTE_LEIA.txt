@@ -1,0 +1,24 @@
+INSTRUÇÕES IMPORTANTES PARA EVITAR CONSUMO DE CRÉDITOS DESNECESSÁRIO
+
+1. O sistema agora está configurado para NÃO fazer testes de API durante a validação
+2. Apenas validação de formato das chaves para evitar chamadas desnecessárias
+3. Tratamento robusto de erros HTML sem consumir créditos extras
+
+COMO USAR COM SEGURANÇA:
+
+1. Certifique-se de que sua chave API está VÁLIDA antes de testar
+2. Se você não tem certeza, teste com apenas 1 arquivo pequeno primeiro  
+3. O sistema detecta erros de créditos e para imediatamente
+
+CHAVES API VÁLIDAS ESPERADAS:
+
+OpenAI: sk-proj-.... ou sk-.... (mais de 40 caracteres)
+Anthropic: sk-ant-.... (mais de 40 caracteres)
+Google: AIzaSy.... (mais de 30 caracteres)
+
+SE AINDA HOUVER ERROS:
+- Verifique se sua conta tem créditos
+- Teste com outro provedor
+- Use chaves API válidas e ativas
+
+O sistema agora está MUITO mais seguro e não deve desperdiçar créditos.

@@ -81,45 +81,45 @@ class OpenAIClient(BaseAIClient):
         self.client = openai.OpenAI(api_key=api_key)
     
     def extract_product_data(self, text: str) -> str:
-        """Extract product data using OpenAI"""
+        """Extract product data using OpenAI - SIMPLIFIED TO AVOID CREDIT WASTE"""
         try:
             prompt = self._get_extraction_prompt(text)
             
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "Você é um assistente especializado em extrair dados de produtos de documentos de pedidos de venda. Responda APENAS com JSON válido, sem texto adicional."},
+                    {"role": "system", "content": "Responda APENAS com JSON válido. Sem texto explicativo."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
-                max_tokens=4000
+                max_tokens=2000
             )
             
             content = response.choices[0].message.content
-            logger.debug(f"OpenAI raw response: {content[:200]}...")
             
-            # Verificar se a resposta é válida
-            if not content or content.strip().startswith('<'):
-                logger.error("OpenAI returned HTML or empty response")
+            # Immediate check for HTML errors
+            if not content:
+                return '{"produtos": []}'
+            
+            content = content.strip()
+            if content.startswith('<html') or content.startswith('<!DOCTYPE'):
+                print("HTML error response detected")
                 return '{"produtos": []}'
                 
             return content
+            
         except Exception as e:
             error_str = str(e).lower()
-            logger.error(f"OpenAI API error: {str(e)}")
             
-            # Identificar erros de créditos/cotas
-            credit_errors = [
-                "insufficient_quota", "quota", "billing", "credits", 
-                "rate limit", "usage limit", "exceeded", "unauthorized",
-                "invalid api key", "authentication", "permission"
-            ]
-            
-            if any(error_term in error_str for error_term in credit_errors):
+            # Critical errors that indicate account/billing issues
+            if any(term in error_str for term in [
+                "insufficient_quota", "quota exceeded", "billing", "unauthorized",
+                "invalid api key", "authentication failed", "401", "402", "403"
+            ]):
                 raise Exception("Entrar em contato com o Fornecedor para ativar o uso da plataforma")
             
-            # Para outros erros de conexão/timeout, retornar estrutura vazia
-            logger.warning(f"OpenAI connection/timeout error, returning empty structure: {str(e)}")
+            # All other errors return empty to avoid crashes
+            print(f"API error: {str(e)}")
             return '{"produtos": []}'
     
     def _get_extraction_prompt(self, text: str) -> str:

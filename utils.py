@@ -67,18 +67,19 @@ def get_file_extension(filename: str) -> str:
     return filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
 
 def validate_api_key(provider: str, api_key: str) -> bool:
-    """Basic API key validation"""
-    if not api_key:
+    """Basic API key format validation - NO API CALLS TO AVOID WASTING CREDITS"""
+    if not api_key or len(api_key) < 10:
         return False
     
+    # ONLY format validation - no actual API calls
     key_patterns = {
-        'openai': api_key.startswith('sk-'),
-        'anthropic': api_key.startswith('sk-ant-'),
-        'google': api_key.startswith('AIzaSy'),
-        'deepseek': api_key.startswith('sk-'),
+        'openai': api_key.startswith('sk-') and len(api_key) > 40,
+        'anthropic': api_key.startswith('sk-ant-') and len(api_key) > 40,
+        'google': api_key.startswith('AIzaSy') and len(api_key) > 30,
+        'deepseek': api_key.startswith('sk-') and len(api_key) > 30,
+        'groq': api_key.startswith('gsk_') and len(api_key) > 30,
         'meta': len(api_key) > 20,
         'mistral': len(api_key) > 20,
-        'groq': api_key.startswith('gsk_'),
         'together': len(api_key) > 20,
         'fireworks': len(api_key) > 20,
         'nvidia': len(api_key) > 20
