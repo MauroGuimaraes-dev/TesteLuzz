@@ -174,16 +174,47 @@ class DocumentProcessor:
     
     def _clean_json_response(self, response: str) -> str:
         """Clean AI response to extract valid JSON"""
-        # Remove markdown code blocks
-        response = re.sub(r'```json\s*', '', response)
-        response = re.sub(r'```\s*', '', response)
-        
-        # Find JSON object
-        json_match = re.search(r'\{.*\}', response, re.DOTALL)
-        if json_match:
-            return json_match.group(0)
-        
-        return response
+        try:
+            # Log the raw response for debugging
+            logger.debug(f"Raw AI response: {response[:500]}...")
+            
+            # Check if response contains HTML error
+            if response.strip().startswith('<'):
+                logger.error("AI response contains HTML instead of JSON")
+                return '{"produtos": []}'
+            
+            # Remove markdown code blocks
+            response = re.sub(r'```json\s*', '', response)
+            response = re.sub(r'```\s*', '', response)
+            
+            # Remove any leading/trailing text that might not be JSON
+            response = response.strip()
+            
+            # Try to find JSON object with better pattern matching
+            json_patterns = [
+                r'\{[^{}]*"produtos"[^{}]*\[[^\[\]]*\][^{}]*\}',  # Simple case
+                r'\{.*?"produtos".*?\[.*?\].*?\}',  # More flexible
+                r'\{.*\}',  # Most flexible
+            ]
+            
+            for pattern in json_patterns:
+                json_match = re.search(pattern, response, re.DOTALL)
+                if json_match:
+                    candidate = json_match.group(0)
+                    try:
+                        # Test if it's valid JSON
+                        json.loads(candidate)
+                        return candidate
+                    except json.JSONDecodeError:
+                        continue
+            
+            # If no valid JSON found, return empty structure
+            logger.warning("No valid JSON found in AI response, returning empty structure")
+            return '{"produtos": []}'
+            
+        except Exception as e:
+            logger.error(f"Error cleaning JSON response: {str(e)}")
+            return '{"produtos": []}'
     
     def _normalize_product_data(self, product_data: Dict, source_file: str) -> Dict[str, Any]:
         """Normalize product data from AI response"""

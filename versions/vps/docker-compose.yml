@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: consolidador-pedidos
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SESSION_SECRET=${SESSION_SECRET:-your-session-secret-key-here}
+      - PYTHONPATH=/app
+      - WORKERS=4
+      - WORKER_CLASS=sync
+      - WORKER_TIMEOUT=300
+      - MAX_REQUESTS=1000
+      - MAX_REQUESTS_JITTER=100
+    volumes:
+      - ./uploads:/app/uploads
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - consolidador-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: consolidador-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/var/www/static
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - web
+    networks:
+      - consolidador-network
+
+  redis:
+    image: redis:alpine
+    container_name: consolidador-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - consolidador-network
+
+  postgres:
+    image: postgres:15
+    container_name: consolidador-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=consolidador
+      - POSTGRES_USER=consolidador
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure_password_here}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - consolidador-network
+
+  backup:
+    build: 
+      context: .
+      dockerfile: Dockerfile.backup
+    container_name: consolidador-backup
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=consolidador
+      - POSTGRES_USER=consolidador
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure_password_here}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+    volumes:
+      - ./backups:/backups
+      - ./uploads:/app/uploads:ro
+    depends_on:
+      - postgres
+    networks:
+      - consolidador-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  consolidador-network:
+    driver: bridge

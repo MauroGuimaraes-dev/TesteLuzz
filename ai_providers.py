@@ -88,7 +88,7 @@ class OpenAIClient(BaseAIClient):
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "Você é um assistente especializado em extrair dados de produtos de documentos de pedidos de venda."},
+                    {"role": "system", "content": "Você é um assistente especializado em extrair dados de produtos de documentos de pedidos de venda. Responda APENAS com JSON válido, sem texto adicional."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.1,
@@ -105,14 +105,16 @@ class OpenAIClient(BaseAIClient):
     def _get_extraction_prompt(self, text: str) -> str:
         """Generate extraction prompt"""
         return f"""
+        Você DEVE responder APENAS com JSON válido. Não inclua texto explicativo antes ou depois do JSON.
+        
         Analise o seguinte texto extraído de um pedido de venda e extraia APENAS os dados de produtos encontrados.
         
-        Para cada produto encontrado, forneça as seguintes informações no formato JSON:
+        Responda EXATAMENTE neste formato JSON:
         {{
             "produtos": [
                 {{
-                    "codigo": "código do produto (se disponível)",
-                    "referencia": "referência do produto (se disponível)",
+                    "codigo": "código do produto ou null",
+                    "referencia": "referência do produto ou null", 
                     "descricao": "descrição completa do produto",
                     "quantidade": número_da_quantidade,
                     "valor_unitario": valor_unitário_numérico,
@@ -121,11 +123,12 @@ class OpenAIClient(BaseAIClient):
             ]
         }}
         
-        IMPORTANTE:
-        - Se um campo não estiver disponível, use null
-        - Valores numéricos devem ser apenas números (sem símbolos de moeda)
-        - Extraia APENAS produtos/materiais, ignore informações de cabeçalho, rodapé, etc.
-        - Se não encontrar produtos, retorne {{"produtos": []}}
+        REGRAS OBRIGATÓRIAS:
+        - Responda APENAS com JSON válido
+        - Use null para campos não disponíveis (não aspas vazias)
+        - Valores numéricos devem ser números (sem símbolos de moeda)
+        - Se não encontrar produtos, retorne: {{"produtos": []}}
+        - NÃO inclua explicações ou texto adicional
         
         Texto para análise:
         {text}
