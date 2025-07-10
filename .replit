@@ -40,3 +40,7 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "uv add openai anthropic google-generativeai pytesseract pillow pypdf2 reportlab openpyxl python-dotenv requests"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
