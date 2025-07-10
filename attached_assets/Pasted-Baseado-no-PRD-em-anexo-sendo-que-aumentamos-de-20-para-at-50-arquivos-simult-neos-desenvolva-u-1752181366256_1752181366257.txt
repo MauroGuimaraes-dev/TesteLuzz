@@ -1,0 +1,83 @@
+Baseado no PRD em anexo (sendo que aumentamos de 20 para até 50 arquivos simultâneos) , desenvolva um app usando a Inteligencia Artificial que leia os arquivos de Pedido de Venda que serão anexados em ‘upload’  e  gere, usando Markdown,  um pedido de COMPRA dos materiais que estão nestes arquivos, mostrando o código a referência a descrição as quantidades dos materiais / produtos que constam em cada arquivo de imagem de Pedido de Venda; Cada produto que se repetir, vc acumula no pedido de Compra (que será gerado) para que seja feita compra dos produtos em um ÚNICO pedido de COMPRA. Separe os ítens iguais, gerando um sub total que é a quantidade de produtos que foram identificados em todos os arquivos que foram anexados. Ao final da execução do app, deve ser gerado um documento, com os códigos, referências, descrições e quantidades acumuladas que foram encontradas em todos os documentos.
+
+O app deverá suportar o upload simultâneo de ATÉ 50 (cinquenta) arquivos (pdf, ou png, ou jpeg) de no máximo 10Mb CADA um.
+
+Deve ser desenvolvido em Python e no frontend, deve haver uma Lista Suspensa (Dropdown list) com 5 LLMs que podem ser selecionadas:
+
+Passo 1: Escolher a Empresa
+
+O usuário seleciona de uma lista:
+
+OpenAI
+
+Anthropic
+
+Google Gemini
+
+DeepSeek
+
+Meta Llama
+
+Mistral AI
+
+Groq
+
+Together AI
+
+Fireworks AI
+
+NVIDIA NIM
+
+Passo 2: Inserir a API KEY
+
+Depois de escolher a empresa, ele insere a chave de acesso dessa empresa.
+
+Exemplo:
+
+Para OpenAI: sk-proj-...
+
+Para Anthropic: claude-...
+
+Para Gemini: AIzaSy...
+
+Para DeepSeek: ds_...
+
+Passo 3: Selecionar o modelo da Empres selecionada após a inserção da API KEY
+
+Exemplo:
+
+Se escolheu OpenAI :
+
+Modelos possíveis: gpt-3.5-turbo, gpt-4, gpt-4o, gpt-4o-mini
+
+Se escolheu Anthropic :
+
+Modelos possíveis: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307
+
+Se escolheu Google (Gemini) :
+
+Modelos possíveis: gemini-pro, gemini-flash, gemini-ultra
+
+Se escolheu DeepSeek :
+
+Modelos possíveis: deepseek-chat, deepseek-coder, deepseek-67b
+
+no arquivo .env, deve ser possível incluir os modelos mais novos, de uma forma fácil e o App já considerar e apresentar para o usuário no passo 3.
+
+O DEFAULT É USAR A OPENAI, COM O GPT-4o
+
+Caso não hajam créditos disponíveis para o uso da LLM a mensagem ‘Entrar em contato com o Fornecedor para ativar o uso da plataforma’, deverá ser apresentada ao usuário, em formato Modal, para que ele possa ler e clicar na mensagem para voltar para a tela anterior.
+
+O app não vai usar Banco de Dados, nesta versão inicial.
+O app, deve ter um Botão para Gerar o Pedido de Compra em PDF
+O app, deve ter um Botão para Gerar o Pedido de Compra em Excel (xlsx)
+
+O app, deve ter um Botão para Gerar o Pedido de Compra no formato CSV
+
+Gere 3 versões do App:
+
+Uma versão para ser hospedado e executado aqui no Replit
+
+Uma para hospedar no Vercel
+
+Uma para hospedar numa VPS da Hostinger ou Contabo
