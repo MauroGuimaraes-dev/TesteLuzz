@@ -149,8 +149,18 @@ class DocumentProcessor:
     def _parse_ai_response(self, ai_response: str, source_file: str) -> List[Dict[str, Any]]:
         """Parse AI response to extract product data"""
         try:
+            # Check for immediate HTML error responses to avoid processing
+            if not ai_response or ai_response.strip().startswith('<html'):
+                print(f"AI returned HTML error response, skipping file: {source_file}")
+                return []
+            
             # Clean the response to extract JSON
             cleaned_response = self._clean_json_response(ai_response)
+            
+            # Additional safety check
+            if cleaned_response == '{"produtos": []}':
+                print(f"Empty products structure returned for file: {source_file}")
+                return []
             
             # Parse JSON
             data = json.loads(cleaned_response)
@@ -165,11 +175,12 @@ class DocumentProcessor:
             return products
             
         except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {str(e)}")
-            logger.error(f"Response: {ai_response}")
+            # This should NOT happen anymore with improved cleaning
+            print(f"JSON decode error after cleaning - this is a bug: {str(e)}")
+            print(f"Cleaned response was: {cleaned_response[:200]}...")
             return []
         except Exception as e:
-            logger.error(f"Error parsing AI response: {str(e)}")
+            print(f"Error parsing AI response: {str(e)}")
             return []
     
     def _clean_json_response(self, response: str) -> str:

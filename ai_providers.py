@@ -105,11 +105,21 @@ class OpenAIClient(BaseAIClient):
                 
             return content
         except Exception as e:
+            error_str = str(e).lower()
             logger.error(f"OpenAI API error: {str(e)}")
-            if "insufficient_quota" in str(e).lower() or "quota" in str(e).lower() or "billing" in str(e).lower():
+            
+            # Identificar erros de créditos/cotas
+            credit_errors = [
+                "insufficient_quota", "quota", "billing", "credits", 
+                "rate limit", "usage limit", "exceeded", "unauthorized",
+                "invalid api key", "authentication", "permission"
+            ]
+            
+            if any(error_term in error_str for error_term in credit_errors):
                 raise Exception("Entrar em contato com o Fornecedor para ativar o uso da plataforma")
-            # Para outros erros, retornar estrutura vazia em vez de falhar
-            logger.warning(f"OpenAI error, returning empty structure: {str(e)}")
+            
+            # Para outros erros de conexão/timeout, retornar estrutura vazia
+            logger.warning(f"OpenAI connection/timeout error, returning empty structure: {str(e)}")
             return '{"produtos": []}'
     
     def _get_extraction_prompt(self, text: str) -> str:
