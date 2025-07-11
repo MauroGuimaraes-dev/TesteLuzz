@@ -1,266 +1,182 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidador de Pedidos</title>
+    <!-- Assumindo que você tem um arquivo de CSS. Ajuste o caminho se necessário. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
 
-{% block title %}Consolidador de Pedidos de Compra com IA{% endblock %}
+    <header>
+        <h1>Consolidador de Pedidos</h1>
+        <nav>
+            <a href="{{ url_for('index') }}">Início</a>
+            <button id="admin-btn" class="btn-admin">Administrador</button>
+        </nav>
+    </header>
 
-{% block content %}
-<div class="container">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="text-center mb-3">
-                <i class="fas fa-robot me-2"></i>
-                Consolidador de Pedidos de Compra com IA
-            </h1>
-            <p class="text-center text-muted">
-                Processe até 50 documentos simultaneamente e gere pedidos de compra consolidados
-            </p>
+    <main class="container">
+        <!-- Seção para exibir mensagens de erro/sucesso (flash messages) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-messages">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <div class="hero">
+            <h2><i class="icon-robot"></i> Consolidador de Pedidos de Compra com IA</h2>
+            <p>Processe até 50 documentos simultaneamente e gere pedidos de compra consolidados</p>
         </div>
-    </div>
 
-    <!-- Configuration Form -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-cogs me-2"></i>
-                Configuração do Provedor de IA
-            </h5>
-        </div>
-        <div class="card-body">
-            <form id="configForm">
-                <div class="row">
-                    <!-- Provider Selection -->
-                    <div class="col-md-4 mb-3">
-                        <label for="provider" class="form-label">Provedor de IA</label>
-                        <select class="form-select" id="provider" name="provider" required>
-                            <option value="">Selecione um provedor</option>
-                            {% for provider in providers %}
-                            <option value="{{ provider.id }}" 
-                                    {% if provider.id == 'openai' %}selected{% endif %}>
-                                {{ provider.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
+        <form id="upload-form" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="session_id" value="{{ session_id }}">
+
+            <!-- Seção de Configuração da IA (Agora pré-preenchida e simplificada) -->
+            <div class="card">
+                <h3>Configuração da IA</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Provedor de IA</label>
+                        <!-- O valor agora vem diretamente do backend -->
+                        <input type="text" value="{{ ai_config.provider }}" class="form-control" readonly>
                     </div>
-
-                    <!-- API Key -->
-                    <div class="col-md-4 mb-3">
-                        <label for="apiKey" class="form-label">Chave API</label>
-                        <div class="input-group">
-                            <input type="password" class="form-control" id="apiKey" name="api_key" 
-                                   placeholder="Insira sua chave API" required>
-                            <button class="btn btn-outline-secondary" type="button" id="toggleApiKey">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <div class="form-text">
-                            <small id="apiKeyHelp">Selecione um provedor para ver o formato da chave</small>
-                        </div>
-                    </div>
-
-                    <!-- Model Selection -->
-                    <div class="col-md-4 mb-3">
-                        <label for="model" class="form-label">Modelo</label>
-                        <select class="form-select" id="model" name="model" required>
-                            <option value="">Selecione um modelo</option>
-                        </select>
+                    <div class="form-group">
+                        <label>Modelo</label>
+                        <!-- O valor agora vem diretamente do backend -->
+                        <input type="text" value="{{ ai_config.model }}" class="form-control" readonly>
                     </div>
                 </div>
+                <p class="form-text">As configurações de IA são gerenciadas pelo Administrador.</p>
+            </div>
+
+            <!-- Seção de Upload de Arquivos -->
+            <div class="card">
+                <h3>Seleção de Arquivos</h3>
+                <div class="form-group">
+                    <label for="documentos">Selecione os arquivos</label>
+                    <input type="file" id="documentos" name="documentos" multiple required>
+                    <p class="form-text">Formatos aceitos: PDF, PNG, JPG, JPEG. Máximo 50 arquivos de 10MB cada.</p>
+                </div>
+                <button type="submit" id="submit-btn" class="btn btn-primary">Processar Documentos</button>
+            </div>
+        </form>
+
+        <!-- Seção de Resultados (inicialmente oculta) -->
+        <div id="results-section" class="card" style="display:none;">
+            <h3>Resultados do Processamento</h3>
+            <div id="loading-spinner" style="display:none;">
+                <p>Processando... Isso pode levar alguns minutos.</p>
+                <div class="spinner"></div>
+            </div>
+            <div id="error-message" class="alert alert-error" style="display:none;"></div>
+            <div id="results-content">
+                <div id="consolidated-table">
+                    <!-- A tabela HTML gerada será inserida aqui pelo JavaScript -->
+                </div>
+                <div id="download-links">
+                    <!-- Os links de download serão inseridos aqui -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Senha do Administrador (inicialmente oculto) -->
+    <div id="admin-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-btn">×</span>
+            <h2>Acesso do Administrador</h2>
+            <form action="{{ url_for('login') }}" method="POST">
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" name="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
             </form>
         </div>
     </div>
 
-    <!-- File Upload -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-upload me-2"></i>
-                Upload de Documentos
-            </h5>
-        </div>
-        <div class="card-body">
-            <form id="uploadForm" enctype="multipart/form-data">
-                <div class="mb-3">
-                    <label for="files" class="form-label">Selecione os arquivos</label>
-                    <input type="file" class="form-control" id="files" name="files" 
-                           multiple accept=".pdf,.png,.jpg,.jpeg" required>
-                    <div class="form-text">
-                        Formatos aceitos: PDF, PNG, JPG, JPEG. Máximo 50 arquivos de 10MB cada.
-                    </div>
-                </div>
+    <!-- Assumindo que você tem um arquivo JS. Ajuste o caminho se necessário. -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // JavaScript para controlar o modal de administração
+        const adminBtn = document.getElementById('admin-btn');
+        const modal = document.getElementById('admin-modal');
+        const closeBtn = document.querySelector('.close-btn');
 
-                <!-- Upload Area -->
-                <div class="upload-area border-2 border-dashed rounded p-4 text-center mb-3" id="uploadArea">
-                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
-                    <h5>Arraste e solte os arquivos aqui</h5>
-                    <p class="text-muted">ou clique para selecionar</p>
-                </div>
+        if (adminBtn && modal && closeBtn) {
+            adminBtn.onclick = function() {
+                modal.style.display = 'block';
+            }
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
 
-                <!-- Selected Files -->
-                <div id="selectedFiles" class="d-none">
-                    <h6>Arquivos Selecionados:</h6>
-                    <div id="filesList" class="row"></div>
-                </div>
+        // Lógica para o formulário de upload (exemplo básico)
+        const uploadForm = document.getElementById('upload-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const resultsSection = document.getElementById('results-section');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const tableContainer = document.getElementById('consolidated-table');
+        const downloadLinksContainer = document.getElementById('download-links');
 
-                <!-- Process Button -->
-                <div class="text-center">
-                    <button type="submit" class="btn btn-primary btn-lg" id="processBtn">
-                        <i class="fas fa-play me-2"></i>
-                        Processar Documentos
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
 
-    <!-- Processing Status -->
-    <div class="card mb-4 d-none" id="processingCard">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-spinner fa-spin me-2"></i>
-                Processando Documentos
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="progress mb-3">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                     role="progressbar" id="progressBar" style="width: 0%"></div>
-            </div>
-            <div id="processingStatus" class="text-center">
-                <p class="mb-0">Inicializando processamento...</p>
-            </div>
-        </div>
-    </div>
+                // Mostra a seção de resultados e o spinner
+                resultsSection.style.display = 'block';
+                loadingSpinner.style.display = 'block';
+                errorMessage.style.display = 'none';
+                tableContainer.innerHTML = '';
+                downloadLinksContainer.innerHTML = '';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Processando...';
 
-    <!-- Results -->
-    <div class="card mb-4 d-none" id="resultsCard">
-        <div class="card-header">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-chart-bar me-2"></i>
-                Resultados do Processamento
-            </h5>
-        </div>
-        <div class="card-body">
-            <!-- Summary -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body text-center">
-                            <h4 id="totalProducts">0</h4>
-                            <small>Produtos Únicos</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body text-center">
-                            <h4 id="totalValue">R$ 0,00</h4>
-                            <small>Valor Total</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body text-center">
-                            <h4 id="processedFiles">0</h4>
-                            <small>Arquivos Processados</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body text-center">
-                            <h4 id="extractedProducts">0</h4>
-                            <small>Produtos Extraídos</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                const formData = new FormData(this);
 
-            <!-- Products Table -->
-            <div class="table-responsive">
-                <table class="table table-striped" id="productsTable">
-                    <thead>
-                        <tr>
-                            <th>Código</th>
-                            <th>Referência</th>
-                            <th>Descrição</th>
-                            <th>Quantidade</th>
-                            <th>Valor Unitário</th>
-                            <th>Valor Total</th>
-                            <th>Fonte</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productsTableBody">
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Export Buttons -->
-            <div class="text-center mt-4">
-                <h6>Exportar Pedido de Compra:</h6>
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-danger" id="exportPdf">
-                        <i class="fas fa-file-pdf me-2"></i>
-                        PDF
-                    </button>
-                    <button type="button" class="btn btn-outline-success" id="exportExcel">
-                        <i class="fas fa-file-excel me-2"></i>
-                        Excel
-                    </button>
-                    <button type="button" class="btn btn-outline-info" id="exportCsv">
-                        <i class="fas fa-file-csv me-2"></i>
-                        CSV
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Error Modal -->
-<div class="modal fade" id="errorModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Erro
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p id="errorMessage"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    Fechar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Credit Error Modal -->
-<div class="modal fade" id="creditErrorModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-credit-card me-2"></i>
-                    Problema com Créditos
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Entrar em contato com o Fornecedor para ativar o uso da plataforma</strong></p>
-                <p>Não há créditos disponíveis para usar este provedor de IA. Entre em contato com o fornecedor para resolver esta questão.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
-                    Entendi
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+                fetch("{{ url_for('process_files') }}", {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loadingSpinner.style.display = 'none';
+                    if (data.error) {
+                        errorMessage.textContent = 'Erro: ' + data.error;
+                        errorMessage.style.display = 'block';
+                    } else {
+                        tableContainer.innerHTML = data.table_html;
+                        let linksHtml = '<h4>Baixar Relatórios:</h4>';
+                        linksHtml += `<a href="${data.download_links.pdf}" class="btn" download>PDF</a> `;
+                        linksHtml += `<a href="${data.download_links.excel}" class="btn" download>Excel</a> `;
+                        linksHtml += `<a href="${data.download_links.csv}" class="btn" download>CSV</a>`;
+                        downloadLinksContainer.innerHTML = linksHtml;
+                    }
+                })
+                .catch(error => {
+                    loadingSpinner.style.display = 'none';
+                    errorMessage.textContent = 'Erro de conexão. Verifique sua internet e tente novamente. Detalhes: ' + error;
+                    errorMessage.style.display = 'block';
+                })
+                .finally(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Processar Documentos';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

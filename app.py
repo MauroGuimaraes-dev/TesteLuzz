@@ -29,15 +29,35 @@ os.makedirs(TEMP_FOLDER, exist_ok=True)
 with app.app_context():
     database.init_db()
 
-# --- ROTAS PRINCIPAIS DA APLICAÇÃO ---
+# --- ROTAS PRINCIPAIS DA APLICAÇÃO (PARA O USUÁRIO FINAL) ---
 
 @app.route('/')
 def index():
+    """
+    Renderiza a página inicial.
+    Busca as configurações de IA do banco de dados e as injeta diretamente no template HTML.
+    Isso elimina a necessidade de uma chamada de API separada pelo JavaScript.
+    """
     session_id = str(uuid.uuid4())
-    return render_template('index.html', session_id=session_id)
+    
+    # Busca as configurações atuais do banco de dados
+    ai_config = database.get_ai_settings()
+    
+    # Define uma configuração padrão caso o banco de dados esteja vazio ou não configurado
+    if not ai_config or 'SUA_CHAVE_API_PADRAO_AQUI' in ai_config.get('api_key', ''):
+        ai_config = {
+            'provider': 'Não Configurado',
+            'model': 'Não Configurado'
+        }
+        flash('A aplicação não foi configurada pelo administrador.', 'warning')
+        
+    return render_template('index.html', session_id=session_id, ai_config=ai_config)
 
 @app.route('/process', methods=['POST'])
 def process_files():
+    """
+    Processa os arquivos enviados pelo usuário, usando as configurações salvas pelo administrador.
+    """
     session_id = request.form.get('session_id')
     if not session_id:
         return jsonify({"error": "ID de sessão inválido."}), 400
@@ -97,31 +117,16 @@ def process_files():
 
 @app.route('/download/<session_id>/<filename>')
 def download_file(session_id, filename):
+    """Permite o download dos arquivos de relatório gerados."""
     directory = os.path.join(os.getcwd(), app.config['TEMP_FOLDER'])
     return send_from_directory(directory, filename, as_attachment=True)
-
-# --- NOVA ROTA PARA RESOLVER O ERRO 404 ---
-@app.route('/api/models/<provider>')
-def get_models(provider):
-    """Retorna uma lista de modelos para um provedor de IA específico."""
-    if provider.lower() == 'openai':
-        # No futuro, isso poderia vir de um banco de dados ou de uma chamada de API.
-        # Por agora, uma lista fixa é perfeita.
-        models = [
-            {"id": "gpt-4o", "name": "GPT-4o (Mais Recente)"},
-            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo"},
-            {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo (Mais Rápido)"}
-        ]
-        return jsonify(models)
-    
-    # Retorna uma lista vazia para provedores não conhecidos
-    return jsonify([])
 
 
 # --- ROTAS DE ADMINISTRAÇÃO ---
 
 @app.route('/login', methods=['POST'])
 def login():
+    """Autentica o administrador."""
     password = request.form.get('password')
     if password == ADMIN_PASSWORD:
         return redirect(url_for('admin_settings'))
@@ -131,6 +136,7 @@ def login():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_settings():
+    """Exibe e salva as configurações de IA e prompts."""
     if request.method == 'POST':
         provider = request.form.get('provider')
         api_key = request.form.get('api_key')
