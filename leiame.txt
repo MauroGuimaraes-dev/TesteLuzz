@@ -1,1 +1,3 @@
+# Forçando um novo deploy para limpar o cache da Vercel
+
 10-07-25 - Projeto Gerador de Ordem de Compra baseado em Ordens de vendas para a Luzzare. Veio do Replit e vou fazer o deploy no Vercel
