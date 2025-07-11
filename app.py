@@ -13,7 +13,13 @@ from report_generator import ReportGenerator
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- CONFIGURAÇÃO DA APLICAÇÃO FLASK ---
-app = Flask(__name__)
+
+# 1. MUDANÇA: Definindo explicitamente as pastas de template e estáticos.
+#    Isso torna a aplicação mais robusta em diferentes ambientes de deploy.
+app = Flask(__name__, 
+            static_folder='static', 
+            template_folder='templates')
+
 app.secret_key = os.getenv('SESSION_SECRET', 'uma-chave-secreta-muito-segura-para-desenvolvimento')
 
 ADMIN_PASSWORD = 'Jvsg1998@0398'
@@ -33,17 +39,9 @@ with app.app_context():
 
 @app.route('/')
 def index():
-    """
-    Renderiza a página inicial.
-    Busca as configurações de IA do banco de dados e as injeta diretamente no template HTML.
-    Isso elimina a necessidade de uma chamada de API separada pelo JavaScript.
-    """
     session_id = str(uuid.uuid4())
-    
-    # Busca as configurações atuais do banco de dados
     ai_config = database.get_ai_settings()
     
-    # Define uma configuração padrão caso o banco de dados esteja vazio ou não configurado
     if not ai_config or 'SUA_CHAVE_API_PADRAO_AQUI' in ai_config.get('api_key', ''):
         ai_config = {
             'provider': 'Não Configurado',
@@ -55,9 +53,6 @@ def index():
 
 @app.route('/process', methods=['POST'])
 def process_files():
-    """
-    Processa os arquivos enviados pelo usuário, usando as configurações salvas pelo administrador.
-    """
     session_id = request.form.get('session_id')
     if not session_id:
         return jsonify({"error": "ID de sessão inválido."}), 400
@@ -117,7 +112,6 @@ def process_files():
 
 @app.route('/download/<session_id>/<filename>')
 def download_file(session_id, filename):
-    """Permite o download dos arquivos de relatório gerados."""
     directory = os.path.join(os.getcwd(), app.config['TEMP_FOLDER'])
     return send_from_directory(directory, filename, as_attachment=True)
 
@@ -126,7 +120,6 @@ def download_file(session_id, filename):
 
 @app.route('/login', methods=['POST'])
 def login():
-    """Autentica o administrador."""
     password = request.form.get('password')
     if password == ADMIN_PASSWORD:
         return redirect(url_for('admin_settings'))
@@ -136,7 +129,6 @@ def login():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_settings():
-    """Exibe e salva as configurações de IA e prompts."""
     if request.method == 'POST':
         provider = request.form.get('provider')
         api_key = request.form.get('api_key')
