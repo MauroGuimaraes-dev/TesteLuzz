@@ -28,12 +28,12 @@ class ReportGenerator:
             filename = f"pedido_compra_{session_id}.pdf"
             filepath = os.path.join(self.temp_folder, filename)
             
+            # Create PDF document
             doc = SimpleDocTemplate(filepath, pagesize=A4)
             story = []
             
-            # --- ESTILOS ---
+            # Styles
             styles = getSampleStyleSheet()
-            
             title_style = ParagraphStyle(
                 'CustomTitle',
                 parent=styles['Heading1'],
@@ -42,35 +42,12 @@ class ReportGenerator:
                 alignment=1  # Center alignment
             )
             
-            # 1. Estilo para o texto dentro das células (permite quebra de linha)
-            #    Alinhado à esquerda para a descrição, e centralizado para outros.
-            cell_style_left = ParagraphStyle(
-                'CustomCellLeft',
-                parent=styles['Normal'],
-                fontSize=8,
-                alignment=0 # 0=Left, 1=Center, 2=Right
-            )
-            
-            cell_style_center = ParagraphStyle(
-                'CustomCellCenter',
-                parent=styles['Normal'],
-                fontSize=8,
-                alignment=1
-            )
-
-            cell_style_right = ParagraphStyle(
-                'CustomCellRight',
-                parent=styles['Normal'],
-                fontSize=8,
-                alignment=2
-            )
-            
-            # --- TÍTULO ---
+            # Title
             title = Paragraph("PEDIDO DE COMPRA CONSOLIDADO", title_style)
             story.append(title)
             story.append(Spacer(1, 20))
             
-            # --- TABELA DE RESUMO ---
+            # Summary info
             summary_data = [
                 ["Data de Geração:", datetime.now().strftime("%d/%m/%Y %H:%M:%S")],
                 ["Total de Produtos:", str(data['total_products'])],
@@ -94,44 +71,44 @@ class ReportGenerator:
             story.append(summary_table)
             story.append(Spacer(1, 30))
             
-            # --- TABELA DE PRODUTOS ---
+            # Products table
             products_title = Paragraph("PRODUTOS CONSOLIDADOS", styles['Heading2'])
             story.append(products_title)
             story.append(Spacer(1, 10))
             
-            # Cabeçalhos da tabela
+            # Table headers
             headers = ['Código', 'Referência', 'Descrição', 'Qtd.', 'Valor Unit.', 'Valor Total', 'Fonte']
             table_data = [headers]
             
-            # Adiciona os produtos
+            # Add products
             for product in data['products']:
-                # 2. Remove o corte de texto ([:50]) e usa o objeto Paragraph
-                #    para permitir a quebra de linha automática.
                 row = [
-                    Paragraph(str(product['codigo'] or '-'), cell_style_left),
-                    Paragraph(str(product['referencia'] or '-'), cell_style_left),
-                    Paragraph(product['descricao'], cell_style_left), # <-- MUDANÇA PRINCIPAL
-                    Paragraph(str(int(product['quantidade'])), cell_style_center),
-                    Paragraph(f"R$ {product['valor_unitario']:.2f}", cell_style_right),
-                    Paragraph(f"R$ {product['valor_total']:.2f}", cell_style_right),
-                    Paragraph(product['fonte'], cell_style_left) # <-- MUDANÇA APLICADA AQUI TAMBÉM
+                    product['codigo'] or '-',
+                    product['referencia'] or '-',
+                    product['descricao'][:50] + '...' if len(product['descricao']) > 50 else product['descricao'],
+                    str(int(product['quantidade'])),
+                    f"R$ {product['valor_unitario']:.2f}",
+                    f"R$ {product['valor_total']:.2f}",
+                    product['fonte'][:20] + '...' if len(product['fonte']) > 20 else product['fonte']
                 ]
                 table_data.append(row)
             
-            # Cria a tabela
+            # Create table
             products_table = Table(table_data, colWidths=[0.8*inch, 0.8*inch, 2.2*inch, 0.5*inch, 0.8*inch, 0.8*inch, 1.1*inch])
             products_table.setStyle(TableStyle([
-                # Estilo do cabeçalho
+                # Header style
                 ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 9),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), # Alinha verticalmente ao meio
                 
-                # Estilo dos dados
+                # Data style
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
                 ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('ALIGN', (0, 1), (2, -1), 'LEFT'),  # Left align text columns
+                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'), # Right align number columns
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 8),
                 ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
@@ -139,13 +116,13 @@ class ReportGenerator:
                 # Grid
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
                 
-                # Listras (Zebra)
+                # Zebra stripes
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
             ]))
             
             story.append(products_table)
             
-            # Constrói o PDF
+            # Build PDF
             doc.build(story)
             
             logger.info(f"PDF generated: {filepath}")
