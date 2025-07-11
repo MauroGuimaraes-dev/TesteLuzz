@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Configurações do Administrador</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Estilos adicionais para a página de admin */
+        .prompt-group { margin-bottom: 2rem; }
+        .prompt-group label { font-weight: bold; display: block; margin-bottom: 0.5rem; }
+        .prompt-group textarea { width: 100%; min-height: 150px; padding: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Configurações de IA</h1>
+        <p>Defina o provedor, a chave API, o modelo e os prompts a serem usados por todos os usuários.</p>
+        
+        <form action="{{ url_for('admin_settings') }}" method="POST">
+            
+            <!-- Seção de Configuração da API -->
+            <fieldset>
+                <legend>Configuração da API</legend>
+                <div class="form-group">
+                    <label for="provider">Provedor de IA</label>
+                    <select id="provider" name="provider" class="form-control">
+                        <option value="OpenAI" {% if current_settings.provider == 'OpenAI' %}selected{% endif %}>OpenAI</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="api_key">Chave API</label>
+                    <input type="password" id="api_key" name="api_key" class="form-control" value="{{ current_settings.api_key }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="model">Modelo</label>
+                    <select id="model" name="model" class="form-control">
+                        <option value="gpt-4o" {% if current_settings.model == 'gpt-4o' %}selected{% endif %}>gpt-4o</option>
+                        <option value="gpt-3.5-turbo" {% if current_settings.model == 'gpt-3.5-turbo' %}selected{% endif %}>gpt-3.5-turbo</option>
+                    </select>
+                </div>
+            </fieldset>
+
+            <hr>
+
+            <!-- Seção de Configuração dos Prompts -->
+            <fieldset>
+                <legend>Configuração dos Prompts</legend>
+                <div class="prompt-group">
+                    <label for="task_prompt">1. Prompt de Definição da Tarefa</label>
+                    <textarea id="task_prompt" name="task_prompt" required>{{ current_settings.task_prompt }}</textarea>
+                </div>
+                <div class="prompt-group">
+                    <label for="rules_prompt">2. Prompt de Regras de Processamento</label>
+                    <textarea id="rules_prompt" name="rules_prompt" required>{{ current_settings.rules_prompt }}</textarea>
+                </div>
+                <div class="prompt-group">
+                    <label for="format_prompt">3. Prompt de Formato do Relatório Final</label>
+                    <textarea id="format_prompt" name="format_prompt" required>{{ current_settings.format_prompt }}</textarea>
+                </div>
+                <div class="prompt-group">
+                    <label for="fallback_prompt">4. Prompt de Fallback (Contingência)</label>
+                    <textarea id="fallback_prompt" name="fallback_prompt" required>{{ current_settings.fallback_prompt }}</textarea>
+                </div>
+            </fieldset>
+
+            <button type="submit" class="btn btn-primary">Salvar Todas as Configurações</button>
+        </form>
+    </div>
+</body>
+</html>
