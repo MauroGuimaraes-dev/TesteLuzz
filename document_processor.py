@@ -15,6 +15,7 @@ class DocumentProcessor:
             raise ValueError("A chave API não pode ser vazia.")
         self.client = OpenAI(api_key=api_key)
         self.model = model
+        # Armazena o dicionário completo de prompts vindo do banco de dados
         self.prompts = prompts
         logger.info(f"DocumentProcessor inicializado com o modelo: {self.model}")
 
@@ -42,31 +43,27 @@ class DocumentProcessor:
         if not document_text.strip():
             return {"products": []}
 
-        # --- MUDANÇA CRÍTICA: ESTRUTURA DE PROMPT MAIS ROBUSTA ---
-        # Usamos o 'system' para dar o contexto e as regras mais importantes.
+        # --- CORREÇÃO CRÍTICA: USANDO OS PROMPTS DO ADMINISTRADOR ---
+        # Monta o prompt de sistema usando os dados do banco de dados
         system_prompt = f"""
-        Você é um assistente de extração de dados altamente preciso. Sua única função é analisar o texto de um documento e retornar um objeto JSON.
+        {self.prompts.get('task_prompt', 'Sua tarefa é extrair dados de produtos.')}
         
-        REGRAS OBRIGATÓRIAS:
-        1.  Sua resposta DEVE ser APENAS um objeto JSON válido.
-        2.  NÃO inclua NENHUM texto explicativo, comentários, ou a palavra "json" antes ou depois do objeto JSON.
-        3.  O objeto JSON DEVE ter uma única chave principal: "produtos".
-        4.  O valor de "produtos" DEVE ser uma lista de objetos.
-        5.  Cada objeto na lista representa um produto e DEVE conter as chaves: "codigo", "referencia", "descricao", "quantidade", "valor_unitario".
-        6.  Se um campo não for encontrado no texto, seu valor no JSON DEVE ser `null`.
-        7.  Campos de quantidade e valor DEVEM ser números (int ou float), sem símbolos de moeda ou formatação.
-        8.  Se NENHUM produto for encontrado no texto, você DEVE retornar exatamente: `{{"products": []}}`
+        Siga estas regras estritamente:
+        {self.prompts.get('rules_prompt', 'Agrupe produtos e some as quantidades.')}
+        
+        O formato de saída DEVE ser um objeto JSON. Use este formato:
+        {self.prompts.get('format_prompt', '{"products": [{"descricao": "produto"}]}')}
+        
+        Em caso de erro ou arquivo inválido:
+        {self.prompts.get('fallback_prompt', 'Ignore o arquivo e continue.')}
+        
+        REGRAS ADICIONAIS:
+        - Sua resposta DEVE ser APENAS o objeto JSON.
+        - NÃO inclua texto, explicações ou comentários fora do JSON.
+        - Se nenhum produto for encontrado, retorne: {{"products": []}}
         """
         
-        # O 'user' prompt agora é mais direto, focando na tarefa específica.
-        user_prompt = f"""
-        Analise o texto abaixo e extraia os dados dos produtos, seguindo estritamente as regras fornecidas.
-
-        Texto para análise:
-        ---
-        {document_text}
-        ---
-        """
+        user_prompt = f"Analise o texto abaixo e extraia os dados dos produtos, seguindo todas as regras e formatos definidos.\n\n---INÍCIO DO TEXTO---\n{document_text}\n---FIM DO TEXTO---"
 
         try:
             response = self.client.chat.completions.create(
@@ -76,7 +73,7 @@ class DocumentProcessor:
                     {"role": "user", "content": user_prompt}
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.0 # Temperatura zero para máxima precisão e menos criatividade
+                temperature=0.0
             )
             
             response_content = response.choices[0].message.content
