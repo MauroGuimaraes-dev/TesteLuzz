@@ -4,28 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consolidador de Pedidos</title>
-
-    <!-- 1. ADICIONE A LINHA DO BOOTSTRAP AQUI -->
+    
+    <!-- Carrega o Bootstrap primeiro -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Assumindo que você tem um arquivo de CSS. Ajuste o caminho se necessário. -->
+    
+    <!-- Carrega seu CSS customizado depois -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 
-    <header>
-        <h1>Consolidador de Pedidos</h1>
-        <nav>
-            <a href="{{ url_for('index') }}">Início</a>
-            <button id="admin-btn" class="btn-admin">Administrador</button>
-        </nav>
+    <header class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                Consolidador de Pedidos
+            </a>
+            <button id="admin-btn" class="btn btn-outline-light">Administrador</button>
+        </div>
     </header>
 
-    <main class="container">
+    <main class="container my-4 flex-grow-1">
         <!-- Seção para exibir mensagens de erro/sucesso (flash messages) -->
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            <div class="flash-messages">
+            <div class="flash-messages my-3">
               {% for category, message in messages %}
                 <div class="alert alert-{{ category }}">{{ message }}</div>
               {% endfor %}
@@ -33,121 +34,121 @@
           {% endif %}
         {% endwith %}
 
-        <div class="hero">
-            <h2><i class="icon-robot"></i> Consolidador de Pedidos de Compra com IA</h2>
-            <p>Processe até 50 documentos simultaneamente e gere pedidos de compra consolidados</p>
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold">Consolidador de Pedidos com IA</h1>
+            <p class="lead text-muted">Processe até 50 documentos simultaneamente e gere pedidos de compra consolidados.</p>
         </div>
 
         <form id="upload-form" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="session_id" value="{{ session_id }}">
 
-            <!-- Seção de Configuração da IA (Agora pré-preenchida e simplificada) -->
-            <div class="card">
-                <h3>Configuração da IA</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Provedor de IA</label>
-                        <!-- O valor agora vem diretamente do backend -->
-                        <input type="text" value="{{ ai_config.provider }}" class="form-control" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label>Modelo</label>
-                        <!-- O valor agora vem diretamente do backend -->
-                        <input type="text" value="{{ ai_config.model }}" class="form-control" readonly>
-                    </div>
-                </div>
-                <p class="form-text">As configurações de IA são gerenciadas pelo Administrador.</p>
-            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    
+                    <!-- 
+                        A SEÇÃO DE CONFIGURAÇÃO DA IA FOI COMPLETAMENTE REMOVIDA DAQUI.
+                        O usuário não precisa mais ver o Provedor ou o Modelo.
+                        A aplicação usará os dados salvos pelo administrador no backend.
+                    -->
 
-            <!-- Seção de Upload de Arquivos -->
-            <div class="card">
-                <h3>Seleção de Arquivos</h3>
-                <div class="form-group">
-                    <label for="documentos">Selecione os arquivos</label>
-                    <input type="file" id="documentos" name="documentos" multiple required>
-                    <p class="form-text">Formatos aceitos: PDF, PNG, JPG, JPEG. Máximo 50 arquivos de 10MB cada.</p>
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Seleção de Arquivos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="documentos" class="form-label">Selecione os arquivos para processar:</label>
+                                <input class="form-control" type="file" id="documentos" name="documentos" multiple required>
+                                <div class="form-text">Formatos aceitos: PDF, PNG, JPG, JPEG. Máximo 50 arquivos de 10MB cada.</div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" id="submit-btn" class="btn btn-primary btn-lg">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="display: none;"></span>
+                                    Processar Documentos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" id="submit-btn" class="btn btn-primary">Processar Documentos</button>
             </div>
         </form>
 
-        <!-- Seção de Resultados (inicialmente oculta) -->
-        <div id="results-section" class="card" style="display:none;">
-            <h3>Resultados do Processamento</h3>
-            <div id="loading-spinner" style="display:none;">
-                <p>Processando... Isso pode levar alguns minutos.</p>
-                <div class="spinner"></div>
-            </div>
-            <div id="error-message" class="alert alert-error" style="display:none;"></div>
-            <div id="results-content">
-                <div id="consolidated-table">
-                    <!-- A tabela HTML gerada será inserida aqui pelo JavaScript -->
-                </div>
-                <div id="download-links">
-                    <!-- Os links de download serão inseridos aqui -->
+        <div id="results-section" class="mt-5" style="display:none;">
+            <h2 class="text-center mb-4">Resultados do Processamento</h2>
+            <div id="error-message" class="alert alert-danger" style="display:none;"></div>
+            <div id="results-content" class="card">
+                <div class="card-body">
+                    <div id="consolidated-table" class="table-responsive"></div>
+                    <div id="download-links" class="text-center mt-4"></div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal de Senha do Administrador (inicialmente oculto) -->
-    <div id="admin-modal" class="modal" style="display:none;">
-        <div class="modal-content">
-            <span class="close-btn">×</span>
-            <h2>Acesso do Administrador</h2>
-            <form action="{{ url_for('login') }}" method="POST">
-                <div class="form-group">
-                    <label for="password">Senha:</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
+    <footer class="bg-dark text-white text-center py-3 mt-auto">
+        <div class="container">
+            <p class="mb-0">© 2025 Consolidador de Pedidos. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Modal de Senha do Administrador -->
+    <div class="modal fade" id="admin-modal" tabindex="-1" aria-labelledby="adminModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="adminModalLabel">Acesso do Administrador</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <button type="submit" class="btn btn-primary">Entrar</button>
-            </form>
+                <form action="{{ url_for('login') }}" method="POST">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Senha:</label>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Entrar</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- Assumindo que você tem um arquivo JS. Ajuste o caminho se necessário. -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
-        // JavaScript para controlar o modal de administração
+        // JavaScript para controlar o modal de administração usando Bootstrap
         const adminBtn = document.getElementById('admin-btn');
-        const modal = document.getElementById('admin-modal');
-        const closeBtn = document.querySelector('.close-btn');
-
-        if (adminBtn && modal && closeBtn) {
-            adminBtn.onclick = function() {
-                modal.style.display = 'block';
-            }
-            closeBtn.onclick = function() {
-                modal.style.display = 'none';
-            }
-            window.onclick = function(event) {
-                if (event.target == modal) {
-                    modal.style.display = 'none';
-                }
-            }
+        if (adminBtn) {
+            const adminModal = new bootstrap.Modal(document.getElementById('admin-modal'));
+            adminBtn.addEventListener('click', () => {
+                adminModal.show();
+            });
         }
 
-        // Lógica para o formulário de upload (exemplo básico)
+        // Lógica do formulário de upload
         const uploadForm = document.getElementById('upload-form');
-        const submitBtn = document.getElementById('submit-btn');
-        const resultsSection = document.getElementById('results-section');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const errorMessage = document.getElementById('error-message');
-        const tableContainer = document.getElementById('consolidated-table');
-        const downloadLinksContainer = document.getElementById('download-links');
-
         if (uploadForm) {
             uploadForm.addEventListener('submit', function(e) {
                 e.preventDefault();
+                
+                const submitBtn = document.getElementById('submit-btn');
+                const spinner = submitBtn.querySelector('.spinner-border');
+                const resultsSection = document.getElementById('results-section');
+                const errorMessage = document.getElementById('error-message');
+                const tableContainer = document.getElementById('consolidated-table');
+                const downloadLinksContainer = document.getElementById('download-links');
 
-                // Mostra a seção de resultados e o spinner
                 resultsSection.style.display = 'block';
-                loadingSpinner.style.display = 'block';
+                spinner.style.display = 'inline-block';
                 errorMessage.style.display = 'none';
                 tableContainer.innerHTML = '';
                 downloadLinksContainer.innerHTML = '';
                 submitBtn.disabled = true;
-                submitBtn.textContent = 'Processando...';
+                
+                const originalButtonText = 'Processar Documentos';
+                submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processando...`;
 
                 const formData = new FormData(this);
 
@@ -157,27 +158,25 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    loadingSpinner.style.display = 'none';
                     if (data.error) {
                         errorMessage.textContent = 'Erro: ' + data.error;
                         errorMessage.style.display = 'block';
                     } else {
                         tableContainer.innerHTML = data.table_html;
-                        let linksHtml = '<h4>Baixar Relatórios:</h4>';
-                        linksHtml += `<a href="${data.download_links.pdf}" class="btn" download>PDF</a> `;
-                        linksHtml += `<a href="${data.download_links.excel}" class="btn" download>Excel</a> `;
-                        linksHtml += `<a href="${data.download_links.csv}" class="btn" download>CSV</a>`;
+                        let linksHtml = '<h5>Baixar Relatórios:</h5>';
+                        linksHtml += `<a href="${data.download_links.pdf}" class="btn btn-danger" download>PDF</a> `;
+                        linksHtml += `<a href="${data.download_links.excel}" class="btn btn-success" download>Excel</a> `;
+                        linksHtml += `<a href="${data.download_links.csv}" class="btn btn-info" download>CSV</a>`;
                         downloadLinksContainer.innerHTML = linksHtml;
                     }
                 })
                 .catch(error => {
-                    loadingSpinner.style.display = 'none';
                     errorMessage.textContent = 'Erro de conexão. Verifique sua internet e tente novamente. Detalhes: ' + error;
                     errorMessage.style.display = 'block';
                 })
                 .finally(() => {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Processar Documentos';
+                    submitBtn.innerHTML = originalButtonText;
                 });
             });
         }
