@@ -1,0 +1,401 @@
+/* --- Global Styles --- */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a2e; /* Dark background */
+    color: #e0e0e0; /* Light text */
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 960px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: #2a2a4a; /* Slightly lighter dark background for containers */
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); /* Stronger shadow */
+}
+
+h1, h2, h3 {
+    color: #ffffff; /* White headings */
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+p {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+/* --- Header --- */
+header {
+    background-color: #16213e; /* Even darker blue for header */
+    color: white;
+    padding: 1rem 0;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+}
+
+header h1 {
+    margin: 0;
+    color: white; /* Ensure heading is white in header */
+}
+
+header nav a, .btn-admin {
+    background-color: #0f3460; /* Darker blue button */
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    text-decoration: none;
+    margin-left: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+header nav a:hover, .btn-admin:hover {
+    background-color: #1b539c; /* Lighter blue on hover */
+}
+
+/* --- Forms --- */
+.card {
+    background-color: #2a2a4a;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #ffffff;
+    text-align: left; /* Align card titles left */
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem; /* Space between form groups */
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    flex: 1; /* Allow form groups to take equal space */
+    min-width: 250px; /* Minimum width before wrapping */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #cccccc; /* Lighter label color */
+}
+
+.form-control {
+    width: calc(100% - 22px); /* Full width minus padding and border */
+    padding: 10px;
+    border: 1px solid #44446a; /* Darker border */
+    border-radius: 4px;
+    background-color: #3a3a5a; /* Even darker input background */
+    color: #e0e0e0;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #5cb8e4; /* Light blue focus */
+    box-shadow: 0 0 0 3px rgba(92, 184, 228, 0.3);
+}
+
+.form-text {
+    font-size: 0.85rem;
+    color: #aaaaaa;
+    margin-top: 0.5rem;
+    text-align: left;
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #3f72af; /* Stronger blue */
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #112d4e; /* Darker blue on hover */
+}
+
+/* Specific styling for file input */
+input[type="file"] {
+    background-color: #3a3a5a;
+    border: 1px solid #44446a;
+    color: #e0e0e0;
+    padding: 8px;
+    border-radius: 4px;
+    width: calc(100% - 16px);
+}
+
+/* --- Results Section --- */
+#results-section {
+    margin-top: 2rem;
+}
+
+#loading-spinner {
+    text-align: center;
+    padding: 2rem;
+    color: #5cb8e4;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top: 4px solid #5cb8e4;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 1rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#error-message {
+    background-color: #ffcccc;
+    color: #cc0000;
+    border: 1px solid #cc0000;
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+}
+
+#consolidated-table table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    background-color: #3a3a5a;
+    color: #e0e0e0;
+}
+
+#consolidated-table th, #consolidated-table td {
+    border: 1px solid #44446a;
+    padding: 8px;
+    text-align: left;
+}
+
+#consolidated-table th {
+    background-color: #0f3460;
+    color: white;
+}
+
+#consolidated-table tr:nth-child(even) {
+    background-color: #2f2f4f; /* Zebra stripe */
+}
+
+#download-links {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+#download-links h4 {
+    color: #ffffff;
+    margin-bottom: 1rem;
+}
+
+#download-links a.btn {
+    margin: 0.5rem;
+    background-color: #3f72af;
+    color: white;
+}
+
+#download-links a.btn:hover {
+    background-color: #112d4e;
+}
+
+/* --- Admin Modal --- */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #2a2a4a;
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 2rem;
+    border: 1px solid #888;
+    width: 80%; /* Could be more responsive */
+    max-width: 500px;
+    border-radius: 10px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+
+.modal-content h2 {
+    color: #ffffff;
+    margin-top: 0;
+    text-align: center;
+}
+
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: #e0e0e0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-content form label {
+    color: #cccccc;
+}
+
+.modal-content form input[type="password"] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin-bottom: 1rem;
+    border: 1px solid #44446a;
+    border-radius: 4px;
+    background-color: #3a3a5a;
+    color: #e0e0e0;
+}
+
+.modal-content form button {
+    width: 100%;
+    background-color: #3f72af;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s ease;
+}
+
+.modal-content form button:hover {
+    background-color: #112d4e;
+}
+
+/* --- Admin Page Specific Styles --- */
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px; /* Consistent border-radius */
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+/* Fieldset and Legend for grouping forms */
+fieldset {
+    border: 1px solid #44446a;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+legend {
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 0 10px;
+    margin-left: -10px;
+}
+
+.prompt-group { 
+    margin-bottom: 1.5rem; /* Slightly reduced margin */
+}
+
+.prompt-group label { 
+    font-weight: bold; 
+    display: block; 
+    margin-bottom: 0.5rem; 
+    color: #cccccc;
+}
+
+.prompt-group textarea { 
+    width: calc(100% - 22px); /* Full width minus padding and border */
+    min-height: 120px; /* Slightly reduced min-height for textareas */
+    padding: 10px; 
+    font-family: monospace;
+    border: 1px solid #44446a;
+    border-radius: 4px;
+    background-color: #3a3a5a;
+    color: #e0e0e0;
+    resize: vertical; /* Allow vertical resizing */
+}
+
+/* Flash messages styling */
+.flash-messages {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.alert-warning {
+    background-color: #ffc107;
+    color: #343a40;
+    border: 1px solid #ffc107;
+}
+
+.alert-error {
+    background-color: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+}
+
+.alert-success {
+    background-color: #28a745;
+    color: white;
+    border: 1px solid #28a745;
+}
+
+/* Spinner for processing */
+.icon-robot {
+    display: inline-block;
+    width: 24px; /* Adjust size as needed */
+    height: 24px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-9h4v2h-4v-2zm2-7c-2.76 0-5 2.24-5 5h10c0-2.76-2.24-5-5-5z"/></svg>'); /* Basic robot icon */
+    background-size: contain;
+    background-repeat: no-repeat;
+    vertical-align: middle;
+    margin-right: 8px;
+}

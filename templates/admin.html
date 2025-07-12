@@ -3,22 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <title>Configurações do Administrador</title>
+    <!-- Link para o seu arquivo CSS para manter a consistência visual -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         /* Estilos adicionais para a página de admin */
-        .prompt-group { margin-bottom: 2rem; }
-        .prompt-group label { font-weight: bold; display: block; margin-bottom: 0.5rem; }
-        .prompt-group textarea { width: 100%; min-height: 150px; padding: 10px; font-family: monospace; }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .prompt-group { 
+            margin-bottom: 2rem; 
+        }
+        .prompt-group label { 
+            font-weight: bold; 
+            display: block; 
+            margin-bottom: 0.5rem; 
+        }
+        .prompt-group textarea { 
+            width: 100%; 
+            min-height: 150px; 
+            padding: 10px; 
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Configurações de IA</h1>
+        
+        <!-- Seção para exibir mensagens de sucesso/erro -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="admin-header">
+            <h1>Configurações de IA</h1>
+            <!-- 1. BOTÃO VOLTAR ADICIONADO AQUI -->
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Voltar para a Aplicação</a>
+        </div>
         <p>Defina o provedor, a chave API, o modelo e os prompts a serem usados por todos os usuários.</p>
         
         <form action="{{ url_for('admin_settings') }}" method="POST">
             
-            <!-- Seção de Configuração da API -->
             <fieldset>
                 <legend>Configuração da API</legend>
                 <div class="form-group">
@@ -42,7 +87,6 @@
 
             <hr>
 
-            <!-- Seção de Configuração dos Prompts -->
             <fieldset>
                 <legend>Configuração dos Prompts</legend>
                 <div class="prompt-group">
