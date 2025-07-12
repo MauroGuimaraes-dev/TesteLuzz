@@ -1,361 +1,173 @@
 import os
-import json
 import logging
-from typing import List, Dict, Any
+import io
+import json
+from openai import OpenAI
+from PyPDF2 import PdfReader
 from PIL import Image
 import pytesseract
-import PyPDF2
-import io
-from collections import defaultdict
-import re
 
 logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
-    """Processes uploaded documents and extracts product data"""
+    """
+    Processa documentos (PDF, Imagens) para extrair texto e, em seguida,
+    usa um modelo de IA para extrair dados estruturados de produtos.
+    """
     
-    def __init__(self):
-        self.supported_formats = ['.pdf', '.png', '.jpg', '.jpeg']
-    
-    def process_files(self, file_paths: List[str], ai_client, session_id: str) -> Dict[str, Any]:
-        """Process multiple files and extract product data"""
-        try:
-            all_products = []
-            processing_info = {
-                'total_files': len(file_paths),
-                'processed_files': 0,
-                'failed_files': [],
-                'extracted_products': 0
-            }
-            
-            for file_path in file_paths:
-                try:
-                    logger.info(f"Processing file: {file_path}")
-                    
-                    # Extract text from file
-                    text = self._extract_text_from_file(file_path)
-                    
-                    if not text.strip():
-                        logger.warning(f"No text extracted from {file_path}")
-                        processing_info['failed_files'].append({
-                            'file': os.path.basename(file_path),
-                            'error': 'Texto não encontrado no arquivo'
-                        })
-                        continue
-                    
-                    # Use AI to extract product data
-                    ai_response = ai_client.extract_product_data(text)
-                    
-                    # Parse AI response
-                    products = self._parse_ai_response(ai_response, file_path)
-                    
-                    if products:
-                        all_products.extend(products)
-                        processing_info['extracted_products'] += len(products)
-                        logger.info(f"Extracted {len(products)} products from {file_path}")
-                    
-                    processing_info['processed_files'] += 1
-                    
-                except Exception as e:
-                    logger.error(f"Error processing {file_path}: {str(e)}")
-                    processing_info['failed_files'].append({
-                        'file': os.path.basename(file_path),
-                        'error': str(e)
-                    })
-            
-            # Consolidate duplicate products
-            consolidated_products = self._consolidate_products(all_products)
-            
-            # Calculate totals
-            total_value = sum(p['valor_total'] for p in consolidated_products)
-            
-            return {
-                'session_id': session_id,
-                'processing_info': processing_info,
-                'products': consolidated_products,
-                'total_products': len(consolidated_products),
-                'total_value': total_value,
-                'timestamp': session_id
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in process_files: {str(e)}")
-            raise e
-    
-    def _extract_text_from_file(self, file_path: str) -> str:
-        """Extract text from file based on its format"""
-        file_ext = os.path.splitext(file_path)[1].lower()
+    # ESTA É A CORREÇÃO: O MÉTODO __init__ AGORA ACEITA OS ARGUMENTOS
+    def __init__(self, api_key: str, model: str, prompts: dict):
+        """
+        Inicializa o processador com as configurações da IA.
         
-        if file_ext == '.pdf':
-            return self._extract_text_from_pdf(file_path)
-        elif file_ext in ['.png', '.jpg', '.jpeg']:
-            return self._extract_text_from_image(file_path)
-        else:
-            raise ValueError(f"Unsupported file format: {file_ext}")
-    
-    def _extract_text_from_pdf(self, file_path: str) -> str:
-        """Extract text from PDF file"""
+        :param api_key: A chave da API da OpenAI.
+        :param model: O modelo de IA a ser usado (ex: 'gpt-4o').
+        :param prompts: Um dicionário contendo os prompts de sistema.
+        """
+        if not api_key:
+            raise ValueError("A chave API não pode ser vazia.")
+            
+        # Armazena as configurações como atributos da instância
+        self.client = OpenAI(api_key=api_key)
+        self.model = model
+        self.prompts = prompts
+        logger.info(f"DocumentProcessor inicializado com o modelo: {self.model}")
+
+    def _extract_text_from_pdf(self, file_stream) -> str:
+        """Extrai texto de um arquivo PDF."""
         try:
-            with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text = ""
-                
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
-                
-                return text
-        except Exception as e:
-            logger.error(f"Error extracting text from PDF {file_path}: {str(e)}")
-            # If PDF text extraction fails, try OCR
-            return self._extract_text_from_image(file_path)
-    
-    def _extract_text_from_image(self, file_path: str) -> str:
-        """Extract text from image using OCR"""
-        try:
-            # Open and preprocess image
-            image = Image.open(file_path)
-            
-            # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            # Improve image quality for OCR
-            image = self._preprocess_image(image)
-            
-            # Extract text using Tesseract
-            text = pytesseract.image_to_string(image, lang='por')
-            
+            reader = PdfReader(file_stream)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() or ""
             return text
         except Exception as e:
-            logger.error(f"Error extracting text from image {file_path}: {str(e)}")
-            raise e
-    
-    def _preprocess_image(self, image: Image.Image) -> Image.Image:
-        """Preprocess image for better OCR results"""
+            logger.error(f"Erro ao extrair texto do PDF: {e}")
+            return ""
+
+    def _extract_text_from_image(self, file_stream) -> str:
+        """Extrai texto de uma imagem usando OCR (Tesseract)."""
         try:
-            # Resize image if too small
-            width, height = image.size
-            if width < 1000 or height < 1000:
-                scale_factor = max(1000 / width, 1000 / height)
-                new_width = int(width * scale_factor)
-                new_height = int(height * scale_factor)
-                image = image.resize((new_width, new_height), Image.LANCZOS)
-            
-            return image
+            image = Image.open(file_stream)
+            text = pytesseract.image_to_string(image, lang='por') # Adicionado idioma português para o OCR
+            return text
         except Exception as e:
-            logger.error(f"Error preprocessing image: {str(e)}")
-            return image
-    
-    def _parse_ai_response(self, ai_response: str, source_file: str) -> List[Dict[str, Any]]:
-        """Parse AI response to extract product data"""
-        try:
-            # Check for immediate HTML error responses to avoid processing
-            if not ai_response or ai_response.strip().startswith('<html'):
-                print(f"AI returned HTML error response, skipping file: {source_file}")
-                return []
-            
-            # Clean the response to extract JSON
-            cleaned_response = self._clean_json_response(ai_response)
-            
-            # Additional safety check
-            if cleaned_response == '{"produtos": []}':
-                print(f"Empty products structure returned for file: {source_file}")
-                return []
-            
-            # Parse JSON
-            data = json.loads(cleaned_response)
-            
-            products = []
-            if 'produtos' in data and isinstance(data['produtos'], list):
-                for product_data in data['produtos']:
-                    product = self._normalize_product_data(product_data, source_file)
-                    if product:
-                        products.append(product)
-            
-            return products
-            
-        except json.JSONDecodeError as e:
-            # This should NOT happen anymore with improved cleaning
-            print(f"JSON decode error after cleaning - this is a bug: {str(e)}")
-            print(f"Cleaned response was: {cleaned_response[:200]}...")
-            return []
-        except Exception as e:
-            print(f"Error parsing AI response: {str(e)}")
-            return []
-    
-    def _clean_json_response(self, response: str) -> str:
-        """Clean AI response to extract valid JSON"""
-        try:
-            if not response or not response.strip():
-                print("Empty response from AI")
-                return '{"produtos": []}'
-            
-            response = response.strip()
-            
-            # Check for common error patterns that waste credits
-            error_patterns = [
-                '<html',
-                '<!DOCTYPE',
-                'error',
-                'unable to',
-                'cannot process',
-                'quota exceeded',
-                'unauthorized',
-                'invalid api key',
-                'billing',
-                'credits'
-            ]
-            
-            response_lower = response.lower()
-            for pattern in error_patterns:
-                if pattern in response_lower:
-                    print(f"AI response contains error pattern '{pattern}': {response[:100]}...")
-                    return '{"produtos": []}'
-            
-            # Remove markdown formatting
-            if '```json' in response:
-                start = response.find('```json') + 7
-                end = response.find('```', start)
-                if end != -1:
-                    response = response[start:end].strip()
-            elif '```' in response:
-                start = response.find('```') + 3
-                end = response.find('```', start)
-                if end != -1:
-                    response = response[start:end].strip()
-            
-            # Simple JSON extraction - look for { ... }
-            start_brace = response.find('{')
-            if start_brace == -1:
-                print("No JSON object found in response")
-                return '{"produtos": []}'
-            
-            # Count braces to find the end
-            brace_count = 0
-            end_pos = start_brace
-            
-            for i in range(start_brace, len(response)):
-                if response[i] == '{':
-                    brace_count += 1
-                elif response[i] == '}':
-                    brace_count -= 1
-                    if brace_count == 0:
-                        end_pos = i
-                        break
-            
-            if brace_count != 0:
-                print("Unmatched braces in JSON")
-                return '{"produtos": []}'
-            
-            potential_json = response[start_brace:end_pos + 1]
-            
-            # Quick validation
-            try:
-                test_parse = json.loads(potential_json)
-                if isinstance(test_parse, dict):
-                    return potential_json
-                else:
-                    print("Parsed JSON is not a dict object")
-                    return '{"produtos": []}'
-            except json.JSONDecodeError as e:
-                print(f"JSON decode error: {str(e)}")
-                return '{"produtos": []}'
-            
-        except Exception as e:
-            print(f"Error cleaning JSON response: {str(e)}")
-            return '{"produtos": []}'
-    
-    def _normalize_product_data(self, product_data: Dict, source_file: str) -> Dict[str, Any]:
-        """Normalize product data from AI response"""
-        try:
-            # Extract and clean data
-            codigo = product_data.get('codigo') or ''
-            referencia = product_data.get('referencia') or ''
-            descricao = product_data.get('descricao') or ''
-            
-            # Skip if no description
-            if not descricao.strip():
-                return None
-            
-            # Parse numeric values
-            quantidade = self._parse_numeric_value(product_data.get('quantidade', 0))
-            valor_unitario = self._parse_numeric_value(product_data.get('valor_unitario', 0))
-            valor_total = self._parse_numeric_value(product_data.get('valor_total', 0))
-            
-            # Calculate missing values
-            if valor_total == 0 and quantidade > 0 and valor_unitario > 0:
-                valor_total = quantidade * valor_unitario
-            elif valor_unitario == 0 and quantidade > 0 and valor_total > 0:
-                valor_unitario = valor_total / quantidade
-            
-            return {
-                'codigo': codigo.strip(),
-                'referencia': referencia.strip(),
-                'descricao': descricao.strip(),
-                'quantidade': quantidade,
-                'valor_unitario': valor_unitario,
-                'valor_total': valor_total,
-                'fonte': os.path.basename(source_file)
-            }
-            
-        except Exception as e:
-            logger.error(f"Error normalizing product data: {str(e)}")
-            return None
-    
-    def _parse_numeric_value(self, value) -> float:
-        """Parse numeric value from various formats"""
-        if isinstance(value, (int, float)):
-            return float(value)
+            logger.error(f"Erro ao extrair texto da imagem: {e}")
+            return ""
+
+    def _get_structured_data_from_ai(self, document_text: str) -> dict:
+        """
+        Envia o texto extraído para a IA e pede dados estruturados em JSON.
+        """
+        if not document_text.strip():
+            return {"products": []}
+
+        # Monta o prompt final para a IA usando as configurações armazenadas
+        system_prompt = f"""
+        {self.prompts.get('task_prompt', '')}
         
-        if isinstance(value, str):
-            # Remove currency symbols and spaces
-            cleaned = re.sub(r'[R$\s,.]', '', value)
-            cleaned = re.sub(r'[^\d]', '', cleaned)
-            
-            try:
-                return float(cleaned) / 100 if cleaned else 0.0
-            except ValueError:
-                return 0.0
+        REGRAS DE PROCESSAMENTO:
+        {self.prompts.get('rules_prompt', '')}
         
-        return 0.0
-    
-    def _consolidate_products(self, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Consolidate duplicate products"""
+        FORMATO DO RELATÓRIO:
+        {self.prompts.get('format_prompt', '')}
+        
+        REGRAS DE CONTINGÊNCIA:
+        {self.prompts.get('fallback_prompt', '')}
+        
+        Responda APENAS com um objeto JSON válido.
+        """
+        
+        user_prompt = f"Por favor, analise o seguinte texto e extraia os dados dos produtos no formato JSON solicitado:\n\n---INÍCIO DO TEXTO---\n{document_text}\n---FIM DO TEXTO---"
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1
+            )
+            
+            json_response = json.loads(response.choices[0].message.content)
+            return json_response
+
+        except Exception as e:
+            logger.error(f"Erro na chamada da API da OpenAI: {e}")
+            raise
+
+    def process_documents(self, filepaths: list) -> dict:
+        """
+        Orquestra o processo completo: lê arquivos, extrai texto, chama a IA,
+        e consolida os resultados.
+        """
+        all_products = []
+        processed_files_count = 0
+        
+        for filepath in filepaths:
+            try:
+                with open(filepath, 'rb') as f:
+                    file_stream = io.BytesIO(f.read())
+                    
+                    if filepath.lower().endswith('.pdf'):
+                        text = self._extract_text_from_pdf(file_stream)
+                    elif filepath.lower().endswith(('.png', '.jpg', '.jpeg')):
+                        text = self._extract_text_from_image(file_stream)
+                    else:
+                        logger.warning(f"Formato de arquivo não suportado: {filepath}")
+                        continue
+
+                if text:
+                    structured_data = self._get_structured_data_from_ai(text)
+                    if structured_data and 'products' in structured_data:
+                        for product in structured_data['products']:
+                            # Garante que os campos existam antes de adicionar
+                            if product and product.get('descricao'):
+                                product['fonte'] = os.path.basename(filepath)
+                                all_products.append(product)
+                
+                processed_files_count += 1
+                
+            except Exception as e:
+                logger.error(f"Falha ao processar o arquivo {os.path.basename(filepath)}: {e}")
+                continue
+
+        # Lógica de consolidação
         consolidated = {}
-        
-        for product in products:
-            # Create a unique key for product identification
-            key = self._generate_product_key(product)
-            
-            if key in consolidated:
-                # Merge duplicate products
-                existing = consolidated[key]
-                existing['quantidade'] += product['quantidade']
-                existing['valor_total'] += product['valor_total']
-                
-                # Update average unit price
-                if existing['quantidade'] > 0:
-                    existing['valor_unitario'] = existing['valor_total'] / existing['quantidade']
-                
-                # Combine sources
-                if product['fonte'] not in existing['fonte']:
-                    existing['fonte'] += f", {product['fonte']}"
+        for prod in all_products:
+            key = (prod.get('codigo', '').strip() or prod.get('referencia', '').strip() or prod.get('descricao', '').strip()).lower()
+            if not key:
+                continue
+
+            if key not in consolidated:
+                consolidated[key] = prod.copy()
+                consolidated[key]['quantidade'] = float(prod.get('quantidade', 0) or 0)
+                consolidated[key]['valor_unitario'] = float(prod.get('valor_unitario', 0) or 0)
             else:
-                consolidated[key] = product.copy()
+                consolidated[key]['quantidade'] += float(prod.get('quantidade', 0) or 0)
+
+        final_products = list(consolidated.values())
         
-        # Sort by description
-        return sorted(consolidated.values(), key=lambda x: x['descricao'])
-    
-    def _generate_product_key(self, product: Dict[str, Any]) -> str:
-        """Generate unique key for product identification"""
-        # Priority: codigo > referencia > description similarity
-        if product['codigo']:
-            return f"codigo_{product['codigo']}"
-        elif product['referencia']:
-            return f"ref_{product['referencia']}"
-        else:
-            # Use normalized description
-            desc = product['descricao'].lower().strip()
-            desc = re.sub(r'[^\w\s]', '', desc)
-            desc = re.sub(r'\s+', ' ', desc)
-            return f"desc_{desc}"
+        total_value = 0
+        for prod in final_products:
+            prod['valor_total'] = prod['quantidade'] * prod['valor_unitario']
+            total_value += prod['valor_total']
+
+        # Geração da tabela HTML para o frontend
+        html_table = "<table class='table table-striped table-bordered'><thead><tr><th>Código</th><th>Referência</th><th>Descrição</th><th>Qtd.</th><th>Valor Unit.</th><th>Valor Total</th><th>Fonte</th></tr></thead><tbody>"
+        for prod in sorted(final_products, key=lambda p: p.get('descricao', '')):
+            html_table += f"<tr><td>{prod.get('codigo', '-')}</td><td>{prod.get('referencia', '-')}</td><td>{prod.get('descricao', '-')}</td><td>{int(prod.get('quantidade', 0))}</td><td>R$ {prod.get('valor_unitario', 0):.2f}</td><td>R$ {prod.get('valor_total', 0):.2f}</td><td>{prod.get('fonte', '-')}</td></tr>"
+        html_table += "</tbody></table>"
+
+        return {
+            "products": final_products,
+            "total_products": len(final_products),
+            "total_value": total_value,
+            "html_table": html_table,
+            "processing_info": {
+                "processed_files": processed_files_count,
+                "extracted_products": len(all_products)
+            }
+        }
