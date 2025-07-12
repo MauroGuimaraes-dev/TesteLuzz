@@ -42,14 +42,31 @@ class DocumentProcessor:
         if not document_text.strip():
             return {"products": []}
 
+        # --- MUDANÇA CRÍTICA: ESTRUTURA DE PROMPT MAIS ROBUSTA ---
+        # Usamos o 'system' para dar o contexto e as regras mais importantes.
         system_prompt = f"""
-        {self.prompts.get('task_prompt', '')}
-        REGRAS DE PROCESSAMENTO: {self.prompts.get('rules_prompt', '')}
-        FORMATO DO RELATÓRIO: {self.prompts.get('format_prompt', '')}
-        REGRAS DE CONTINGÊNCIA: {self.prompts.get('fallback_prompt', '')}
-        Responda APENAS com um objeto JSON válido.
+        Você é um assistente de extração de dados altamente preciso. Sua única função é analisar o texto de um documento e retornar um objeto JSON.
+        
+        REGRAS OBRIGATÓRIAS:
+        1.  Sua resposta DEVE ser APENAS um objeto JSON válido.
+        2.  NÃO inclua NENHUM texto explicativo, comentários, ou a palavra "json" antes ou depois do objeto JSON.
+        3.  O objeto JSON DEVE ter uma única chave principal: "produtos".
+        4.  O valor de "produtos" DEVE ser uma lista de objetos.
+        5.  Cada objeto na lista representa um produto e DEVE conter as chaves: "codigo", "referencia", "descricao", "quantidade", "valor_unitario".
+        6.  Se um campo não for encontrado no texto, seu valor no JSON DEVE ser `null`.
+        7.  Campos de quantidade e valor DEVEM ser números (int ou float), sem símbolos de moeda ou formatação.
+        8.  Se NENHUM produto for encontrado no texto, você DEVE retornar exatamente: `{{"products": []}}`
         """
-        user_prompt = f"Por favor, analise o seguinte texto e extraia os dados dos produtos no formato JSON solicitado:\n\n---INÍCIO DO TEXTO---\n{document_text}\n---FIM DO TEXTO---"
+        
+        # O 'user' prompt agora é mais direto, focando na tarefa específica.
+        user_prompt = f"""
+        Analise o texto abaixo e extraia os dados dos produtos, seguindo estritamente as regras fornecidas.
+
+        Texto para análise:
+        ---
+        {document_text}
+        ---
+        """
 
         try:
             response = self.client.chat.completions.create(
@@ -59,22 +76,19 @@ class DocumentProcessor:
                     {"role": "user", "content": user_prompt}
                 ],
                 response_format={"type": "json_object"},
-                temperature=0.1
+                temperature=0.0 # Temperatura zero para máxima precisão e menos criatividade
             )
             
             response_content = response.choices[0].message.content
             
-            # --- MUDANÇA CRÍTICA PARA ROBUSTEZ ---
-            # Tenta carregar o JSON. Se falhar, ou se não for um dicionário,
-            # retorna um dicionário vazio, evitando que o programa quebre.
             try:
                 json_response = json.loads(response_content)
                 if not isinstance(json_response, dict):
-                    logger.warning("Resposta da IA não é um dicionário. Retornando vazio.")
-                    return {} # Retorna um dicionário vazio se não for um dict
+                    logger.warning(f"Resposta da IA não é um dicionário: {response_content}")
+                    return {}
             except json.JSONDecodeError:
                 logger.error(f"Falha ao decodificar JSON da IA. Resposta recebida: {response_content}")
-                return {} # Retorna um dicionário vazio em caso de erro de JSON
+                return {}
 
             return json_response
 
@@ -102,8 +116,6 @@ class DocumentProcessor:
                 if text:
                     structured_data = self._get_structured_data_from_ai(text)
                     
-                    # --- MUDANÇA CRÍTICA PARA ROBUSTEZ ---
-                    # Verifica se a chave 'products' existe e se é uma lista antes de iterar
                     if structured_data and isinstance(structured_data.get('products'), list):
                         for product in structured_data['products']:
                             if product and product.get('descricao'):
@@ -118,11 +130,9 @@ class DocumentProcessor:
                 logger.error(f"Falha ao processar o arquivo {os.path.basename(filepath)}: {e}")
                 continue
 
-        # Se depois de todos os arquivos, nenhum produto foi extraído, retorna None
         if not all_products:
             return None
 
-        # Lógica de consolidação
         consolidated = {}
         for prod in all_products:
             key = (prod.get('codigo', '').strip() or prod.get('referencia', '').strip() or prod.get('descricao', '').strip()).lower()
